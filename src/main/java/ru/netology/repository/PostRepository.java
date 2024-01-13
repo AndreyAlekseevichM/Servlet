@@ -1,51 +1,44 @@
 package ru.netology.repository;
 
-import ru.netology.exception.NotFoundException;
+import org.springframework.stereotype.Repository;
 import ru.netology.model.Post;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-// Stub
-
+@Repository
 public class PostRepository {
+    private final ConcurrentMap<Long, Post> allPosts;
+    private final AtomicLong idCounter = new AtomicLong();
 
-    private final AtomicLong counter = new AtomicLong(0);
+    public PostRepository() {
+        this.allPosts = new ConcurrentHashMap<>();
+    }
 
-    private final Map<Long, Post> posts = new ConcurrentHashMap<>();
-
-    public List<Post> all() {
-        return new ArrayList<>(posts.values());
+    public Collection<Post> all() {
+        return allPosts.values();
     }
 
     public Optional<Post> getById(long id) {
-        return Optional.of(posts.get(id));
+        return Optional.ofNullable(allPosts.get(id));
     }
 
-    public Post save(Post post) {
-        Post tempPost;
-        if (post.getId() == 0) {
-            counter.addAndGet(1);
-            posts.put(counter.get(), new Post(counter.get(), post.getContent()));
-            tempPost = posts.get(counter.get());
-        } else if (posts.containsKey(post.getId())) {
-            posts.replace(post.getId(), posts.get(post.getId()), post);
-            tempPost = post;
-        } else {
-            throw new NotFoundException("There is no post with specified id");
+    public Post save(Post savePost) {
+        if (savePost.getId() == 0) {
+            long id = idCounter.incrementAndGet();
+            savePost.setId(id);
+            allPosts.put(id, savePost);
+        } else if (savePost.getId() != 0) {
+            Long currentId = savePost.getId();
+            allPosts.put(currentId, savePost);
         }
-        return tempPost;
+        return savePost;
     }
 
     public void removeById(long id) {
-        if (posts.containsKey(id)) {
-            posts.remove(id);
-        } else {
-            throw new NotFoundException("There is no post with specified id");
-        }
+        allPosts.remove(id);
     }
 }
